@@ -1,105 +1,353 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
+/* AtlasBorder Design System - Exact match to provided styles */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    /* Core colors from original CSS */
+    --bg: 210 40% 98%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --text: 222 47% 11%;
+    --muted: 215 19% 35%;
+    --border: 222 47% 11% / 0.14;
+    --brand: 222 47% 11%;
+    --soft: 210 40% 96%;
+    --ok: 166 64% 26%;
+    --okbg: 183 100% 96%;
+    --warn: 32 85% 37%;
+    --warnbg: 48 100% 96%;
+    
+    /* Semantic mappings */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card-bg: var(--card);
+    --card-foreground: var(--text);
+    --popover: var(--card);
+    --popover-foreground: var(--text);
+    --primary: var(--brand);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--soft);
+    --secondary-foreground: var(--text);
+    --muted-color: var(--soft);
+    --muted-foreground: var(--muted);
+    --accent: var(--soft);
+    --accent-foreground: var(--text);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border-color: var(--border);
+    --input: var(--border);
+    --ring: var(--brand);
+    --radius: 16px;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+html, body {
+  height: 100%;
+}
 
-  body {
-    @apply bg-background text-foreground;
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: hsl(var(--bg));
+  color: hsl(var(--text));
+}
+
+html[data-lang="ar"] body {
+  font-family: "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+/* Container */
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Card */
+.card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 1px 10px hsl(222 47% 11% / 0.04);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+/* Typography */
+.kicker {
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: hsl(var(--muted));
+  text-transform: uppercase;
+}
+
+.big {
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  margin: 6px 0 0;
+}
+
+.small {
+  font-size: 13px;
+  color: hsl(var(--muted));
+  line-height: 1.45;
+  margin: 8px 0 0;
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.nav a {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.nav a:hover {
+  background: hsl(var(--soft));
+}
+
+.nav a.active {
+  background: hsl(var(--brand));
+  border-color: hsl(var(--brand));
+  color: hsl(var(--card));
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background: hsl(var(--soft));
+}
+
+.btn.primary {
+  background: hsl(var(--brand));
+  border-color: hsl(var(--brand));
+  color: hsl(var(--card));
+}
+
+.btn.primary:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Horizontal Rule */
+.hr {
+  border-top: 1px solid hsl(var(--border));
+  margin: 14px 0;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 780px) {
+  .grid.two {
+    grid-template-columns: 1fr 1fr;
   }
+  .grid.three {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Form elements */
+label {
+  font-weight: 900;
+}
+
+input, select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 14px;
+  background: hsl(var(--card));
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: hsl(var(--brand));
+}
+
+/* Option */
+.option {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  padding: 12px;
+  background: hsl(var(--card));
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.option:hover {
+  border-color: hsl(var(--brand));
+}
+
+.option.selected {
+  border-color: hsl(var(--brand));
+  background: hsl(var(--soft));
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: hsl(var(--soft));
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.badge.ok {
+  background: hsl(var(--okbg));
+  color: hsl(var(--ok));
+  border: 1px solid hsl(166 64% 26% / 0.25);
+}
+
+.badge.warn {
+  background: hsl(var(--warnbg));
+  color: hsl(var(--warn));
+  border: 1px solid hsl(32 85% 37% / 0.25);
+}
+
+/* List */
+.list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+/* Link Card */
+.linkcard {
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--soft));
+  padding: 12px;
+}
+
+.linkcard a {
+  font-weight: 900;
+  color: hsl(var(--text));
+  text-decoration: underline;
+}
+
+/* Footer */
+.footer {
+  margin-top: 16px;
+  color: hsl(var(--muted));
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Quiz specific styles */
+.quiz-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.quiz-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--border));
+  transition: background 0.2s;
+}
+
+.quiz-progress-dot.active {
+  background: hsl(var(--brand));
+}
+
+.quiz-progress-dot.completed {
+  background: hsl(var(--ok));
+}
+
+/* Results section */
+.result-section {
+  margin-top: 16px;
+}
+
+.result-item {
+  padding: 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  margin-bottom: 8px;
+  background: hsl(var(--card));
+}
+
+/* Accordion for FAQ style */
+.accordion-item {
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  padding: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  background: hsl(var(--card));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.accordion-content {
+  padding: 0 12px 12px;
+  font-size: 13px;
+  color: hsl(var(--muted));
+  line-height: 1.45;
 }
