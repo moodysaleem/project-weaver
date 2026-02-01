@@ -2,10 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { AFFILIATE } from '@/lib/i18n';
 
-type QuizStep = 'intro' | 'match' | 'budget' | 'accommodation' | 'results';
+type QuizStep = 'intro' | 'match' | 'host' | 'budget' | 'accommodation' | 'results';
 
 interface QuizAnswers {
   match: string;
+  hostCity: string; // only needed for "Dallas / Atlanta" or "Various"
   budget: string; // budget | mid | premium
   accommodation: string;
 }
@@ -17,6 +18,14 @@ const MATCHES = [
   { id: 'knockout-qf', label: 'Quarter Final', date: 'July 3-4, 2026', city: 'Various' },
   { id: 'knockout-sf', label: 'Semi Final', date: 'July 7-8, 2026', city: 'Dallas / Atlanta' },
   { id: 'final', label: 'Final', date: 'July 19, 2026', city: 'New York/New Jersey' },
+];
+
+const HOST_CHOICES = [
+  { id: 'ny', label: { en: 'New York / New Jersey', ar: 'نيويورك / نيوجيرسي' } },
+  { id: 'dallas', label: { en: 'Dallas, Texas', ar: 'دالاس - تكساس' } },
+  { id: 'atlanta', label: { en: 'Atlanta, Georgia', ar: 'أتلانتا - جورجيا' } },
+  { id: 'tor', label: { en: 'Toronto, Canada', ar: 'تورونتو - كندا' } },
+  { id: 'mx', label: { en: 'Mexico City, Mexico', ar: 'مكسيكو سيتي - المكسيك' } },
 ];
 
 const BUDGETS = [
@@ -32,17 +41,33 @@ const ACCOMMODATIONS = [
   { id: 'friends', label: { en: 'Staying with friends/family', ar: 'مع أصدقاء/عائلة' } },
 ];
 
-type RiskItem = { icon: string; title: string; body: string };
+type RiskWithFix = { icon: string; title: string; problem: string; fix: string };
 type CardItem = { icon: string; title: string; body: string };
 
-function normalizeCityKey(city?: string): 'ny' | 'mx' | 'tor' | 'dal_atl' | 'various' {
-  if (!city) return 'various';
-  const c = city.toLowerCase();
+function normalizeCityKey(matchCity?: string, hostCity?: string): 'ny' | 'mx' | 'tor' | 'dallas' | 'atlanta' {
+  const hc = (hostCity || '').toLowerCase();
+  if (hc.includes('dallas')) return 'dallas';
+  if (hc.includes('atlanta')) return 'atlanta';
+  if (hc.includes('tor')) return 'tor';
+  if (hc.includes('mx')) return 'mx';
+  if (hc.includes('ny')) return 'ny';
+
+  const c = (matchCity || '').toLowerCase();
   if (c.includes('new york') || c.includes('new jersey')) return 'ny';
   if (c.includes('mexico')) return 'mx';
   if (c.includes('toronto')) return 'tor';
-  if (c.includes('dallas') || c.includes('atlanta')) return 'dal_atl';
-  return 'various';
+  if (c.includes('dallas')) return 'dallas';
+  if (c.includes('atlanta')) return 'atlanta';
+
+  // fallback: if user didn’t pick hostCity for Various, assume NY as default (but we prevent that by step)
+  return 'ny';
+}
+
+function bookingAreaSearch(area: string, lang: 'en' | 'ar') {
+  // Keep it simple and reliable. Booking deep links vary by program; a search URL is “good enough” for now.
+  const q = encodeURIComponent(area);
+  const locale = lang === 'ar' ? 'ar' : 'en-us';
+  return `https://www.booking.com/searchresults.html?ss=${q}&lang=${locale}`;
 }
 
 export default function WorldCupPage() {
@@ -50,6 +75,7 @@ export default function WorldCupPage() {
   const [step, setStep] = useState<QuizStep>('intro');
   const [answers, setAnswers] = useState<QuizAnswers>({
     match: '',
+    hostCity: '',
     budget: '',
     accommodation: '',
   });
@@ -57,287 +83,355 @@ export default function WorldCupPage() {
   const content = {
     en: {
       title: 'WorldCup 2026 Planner',
-      subtitle: 'Plan your match-week calmly with practical steps — not generic advice.',
+      subtitle: 'Not generic advice — real pitfalls + the fixes, so you travel calmly.',
       start: 'Start Planning',
+
       matchQuestion: 'Which match are you planning to attend?',
+      hostQuestion: 'Which host city are you focusing on?',
+      hostHelper: 'Some matches are listed as “Various” or “Dallas / Atlanta”. Pick the city you’re actually planning for so the guidance becomes specific.',
       budgetQuestion: "What's your weekly budget for the trip?",
       accommodationQuestion: 'Where do you prefer to stay?',
+
       next: 'Next',
       back: 'Back',
       seeResults: 'See My Plan',
       resultsTitle: 'Your Match-Week Plan',
       selectedMatch: 'Selected Match',
+      yourHostCity: 'Host City',
       yourBudget: 'Your Budget',
       stayType: 'Accommodation',
-      nextSteps: 'Recommended Next Steps',
-      bookFlights: 'Book flights early (prices jump as match week approaches)',
-      bookAccommodation: 'Reserve accommodation with flexible cancellation',
-      travelInsurance: 'Get medical coverage you can actually use on the ground',
-      localTours: 'Browse local tours (optional)',
-      usefulLinks: 'Useful Links',
+
+      risksTitle: 'Top 3 pitfalls (and the fixes)',
+      risksSubtitle: 'This is where people lose money, time, or peace of mind — and how to avoid it.',
+
+      whereToStayTitle: 'Comfortable areas to stay (by name)',
+      whereToStaySubtitle: 'These bases are usually easier for visitors: food, walkability, and simpler routes back after the match.',
+      beCarefulTitle: 'Comfort “speed bumps” (what to avoid by type)',
+      beCarefulSubtitle: 'Not “danger”. More like: places that often feel isolated, inconvenient late-night, or stressful for families depending on the block.',
+      quickPlanTitle: 'Your quick plan (10 minutes, no stress)',
+      note: 'Note: guidance only, not official legal/travel advice.',
+
+      insuranceTitle: 'Insurance reality check (the part people regret ignoring)',
+      insuranceBody:
+        'In the US, a simple doctor visit or an ER visit can cost hundreds to thousands of dollars. Many plans reimburse later — meaning you may pay first.',
+      insuranceFix:
+        'If you want peace of mind: choose a plan that can coordinate care and arrange payment for expensive cases via its assistance network (read the policy).',
+
+      linksTitle: 'Useful links',
+      linkHint: 'Use these after you pick your base and understand the pitfalls.',
       startOver: 'Start Over',
 
-      risksTitle: 'Top 3 “things people don’t expect” (based on your answers)',
-      risksSubtitle: 'This is where travelers lose time, money, or peace of mind.',
-
-      whereToStayTitle: 'Where to stay (comfortable bases by name)',
-      whereToStaySubtitle: 'These areas are usually easier for visitors: walkable, food options, and simpler transport.',
-      beCarefulTitle: 'Comfort pitfalls (what to avoid by “type”)',
-      beCarefulSubtitle: 'Not “danger”, but places that often feel isolated, inconvenient late-night, or family-unfriendly depending on the block.',
-
-      insuranceTitle: 'Insurance reality check (this is what surprises people)',
-      insuranceSubtitle:
-        'In the US, a doctor visit or an ER visit can cost hundreds to thousands of dollars. Many plans reimburse you later, meaning you may pay first.',
-      insuranceTip:
-        'If you want peace of mind, choose a plan that can coordinate care and arrange payment for expensive cases via its assistance network (read the policy).',
-
-      smartLinksTitle: 'Smart links (specific, not generic)',
-      linkHint: 'Use the links below after you review the risks + city guidance.',
-      note: 'Note: this tool is guidance, not official legal/travel advice.'
+      action1: 'Pick your base area and lock a flexible hotel',
+      action2: 'Test your late-night return route (transfers + walking)',
+      action3: 'Choose medical coverage that fits “pay-first vs arranged payment”',
+      action4: 'Save your match day documents and addresses offline',
     },
     ar: {
       title: 'مخطط كأس العالم 2026',
-      subtitle: 'خطّط لأسبوع المباراة بهدوء — بخطوات عملية وليست نصائح عامة.',
+      subtitle: 'ليس كلامًا عامًا — مطبات واقعية + حلولها حتى تسافر بهدوء.',
       start: 'ابدأ التخطيط',
+
       matchQuestion: 'أي مباراة تخطط لحضورها؟',
+      hostQuestion: 'أي مدينة مضيفة تركز عليها؟',
+      hostHelper: 'بعض المباريات تظهر “متنوعة” أو “دالاس / أتلانتا”. اختر المدينة التي ستسافر لها فعليًا لتصبح الإرشادات محددة.',
       budgetQuestion: 'ما هي ميزانيتك الأسبوعية للرحلة؟',
       accommodationQuestion: 'أين تفضل الإقامة؟',
+
       next: 'التالي',
       back: 'رجوع',
       seeResults: 'اعرض خطتي',
       resultsTitle: 'خطة أسبوع المباراة',
       selectedMatch: 'المباراة المختارة',
+      yourHostCity: 'المدينة المضيفة',
       yourBudget: 'ميزانيتك',
       stayType: 'الإقامة',
-      nextSteps: 'الخطوات التالية الموصى بها',
-      bookFlights: 'احجز الطيران مبكراً (الأسعار ترتفع مع اقتراب أسبوع المباراة)',
-      bookAccommodation: 'احجز سكنًا مع سياسة إلغاء مرنة',
-      travelInsurance: 'احصل على تغطية طبية تستطيع استخدامها فعليًا هناك',
-      localTours: 'تصفح جولات محلية (اختياري)',
-      usefulLinks: 'روابط مفيدة',
+
+      risksTitle: 'أهم 3 مطبات (ومعها الحلول)',
+      risksSubtitle: 'هنا يخسر الناس مالًا أو وقتًا أو راحة بال — وهكذا تتفاداها.',
+
+      whereToStayTitle: 'مناطق مريحة للسكن (بالأسماء)',
+      whereToStaySubtitle: 'هذه قواعد غالبًا أسهل للزوار: خدمات وطعام ومشي ومسارات عودة أبسط بعد المباراة.',
+      beCarefulTitle: 'مطبات الراحة (ما يجب تجنبه حسب “النوع”)',
+      beCarefulSubtitle: 'ليس “خطرًا”. بل أماكن قد تكون معزولة أو مزعجة ليلًا أو مرهقة للعائلة حسب الشارع.',
+      quickPlanTitle: 'خطتك السريعة (10 دقائق بدون توتر)',
+      note: 'ملاحظة: هذه إرشادات عامة وليست استشارة رسمية.',
+
+      insuranceTitle: 'توضيح مهم عن التأمين (الجزء الذي يندم الناس على تجاهله)',
+      insuranceBody:
+        'في أمريكا، زيارة طبيب أو قسم الطوارئ قد تكلف مئات إلى آلاف الدولارات. كثير من الخطط تعمل بنظام “تعويض لاحق” — أي قد تدفع أنت أولًا.',
+      insuranceFix:
+        'لراحة بال أكبر: اختر خطة لديها خدمة مساعدة/شبكة يمكنها ترتيب العلاج وترتيب الدفع للحالات المكلفة (اقرأ الشروط جيدًا).',
+
+      linksTitle: 'روابط مفيدة',
+      linkHint: 'استخدم الروابط بعد اختيار قاعدة السكن وفهم المطبات.',
       startOver: 'ابدأ من جديد',
 
-      risksTitle: 'أهم 3 أمور “قد لا تتوقعها” (حسب إجاباتك)',
-      risksSubtitle: 'هنا عادةً يخسر المسافر وقتًا أو مالًا أو راحة بال.',
-
-      whereToStayTitle: 'أين تسكن؟ (مناطق مريحة بالأسماء)',
-      whereToStaySubtitle: 'هذه مناطق غالبًا مناسبة للزوار: مشي أفضل، مطاعم، وتنقل أسهل.',
-      beCarefulTitle: 'مطبات الراحة (ما يجب تجنبه حسب “النوع”)',
-      beCarefulSubtitle: 'ليس “خطرًا”، لكن أماكن قد تكون معزولة أو مزعجة ليلًا أو غير مناسبة للعائلة حسب الشارع.',
-
-      insuranceTitle: 'توضيح مهم عن التأمين (هذا ما يُفاجئ الناس)',
-      insuranceSubtitle:
-        'في أمريكا، زيارة طبيب أو قسم الطوارئ قد تكلف مئات إلى آلاف الدولارات. كثير من الخطط تعمل بنظام “تعويض لاحق”، أي قد تدفع أنت أولًا.',
-      insuranceTip:
-        'لراحة بال أكبر: اختر خطة لديها “مساعدة/شبكة” يمكنها ترتيب العلاج وترتيب الدفع للحالات المكلفة (اقرأ الشروط جيدًا).',
-
-      smartLinksTitle: 'روابط ذكية (محددة وليست عامة)',
-      linkHint: 'استخدم الروابط أدناه بعد مراجعة المخاطر وإرشادات المدينة.',
-      note: 'ملاحظة: هذه أداة إرشادية وليست استشارة رسمية.'
+      action1: 'اختر قاعدة سكن مريحة واحجز بسياق إلغاء مرن',
+      action2: 'اختبر مسار العودة ليلًا (تبديلات + مشي)',
+      action3: 'اختر تغطية طبية تناسب “الدفع أولًا vs ترتيب الدفع”',
+      action4: 'احفظ مستندات يوم المباراة والعناوين بدون إنترنت',
     }
   };
 
   const c = content[lang];
 
-  const steps: QuizStep[] = ['match', 'budget', 'accommodation'];
+  const steps: QuizStep[] = ['match', 'host', 'budget', 'accommodation'].filter((s) => {
+    if (s !== 'host') return true;
+    const m = MATCHES.find(x => x.id === answers.match);
+    if (!m) return false;
+    return m.city === 'Various' || m.city.includes('Dallas / Atlanta');
+  });
+
   const currentStepIndex = steps.indexOf(step);
 
   const handleSelect = (field: keyof QuizAnswers, value: string) => {
     setAnswers(prev => ({ ...prev, [field]: value }));
   };
 
+  const selectedMatch = MATCHES.find(m => m.id === answers.match);
+
+  const needsHostCity = useMemo(() => {
+    if (!selectedMatch) return false;
+    return selectedMatch.city === 'Various' || selectedMatch.city.includes('Dallas / Atlanta');
+  }, [selectedMatch]);
+
   const goNext = () => {
-    if (step === 'intro') setStep('match');
-    else if (step === 'match' && answers.match) setStep('budget');
-    else if (step === 'budget' && answers.budget) setStep('accommodation');
-    else if (step === 'accommodation' && answers.accommodation) setStep('results');
+    if (step === 'intro') return setStep('match');
+
+    if (step === 'match' && answers.match) {
+      if (needsHostCity) return setStep('host');
+      return setStep('budget');
+    }
+
+    if (step === 'host' && answers.hostCity) return setStep('budget');
+    if (step === 'budget' && answers.budget) return setStep('accommodation');
+    if (step === 'accommodation' && answers.accommodation) return setStep('results');
   };
 
   const goBack = () => {
-    if (step === 'match') setStep('intro');
-    else if (step === 'budget') setStep('match');
-    else if (step === 'accommodation') setStep('budget');
-    else if (step === 'results') setStep('accommodation');
+    if (step === 'match') return setStep('intro');
+    if (step === 'host') return setStep('match');
+    if (step === 'budget') return needsHostCity ? setStep('host') : setStep('match');
+    if (step === 'accommodation') return setStep('budget');
+    if (step === 'results') return setStep('accommodation');
   };
 
   const startOver = () => {
-    setAnswers({ match: '', budget: '', accommodation: '' });
+    setAnswers({ match: '', hostCity: '', budget: '', accommodation: '' });
     setStep('intro');
   };
 
-  const selectedMatch = MATCHES.find(m => m.id === answers.match);
   const selectedBudget = BUDGETS.find(b => b.id === answers.budget);
   const selectedAccommodation = ACCOMMODATIONS.find(a => a.id === answers.accommodation);
 
-  const topRisks: RiskItem[] = useMemo(() => {
-    const risks: RiskItem[] = [];
-    const budgetLow = answers.budget === 'budget';
-    const stayingBudgetish = answers.accommodation === 'hostel' || answers.accommodation === 'friends';
+  const cityKey = useMemo(() => {
+    // hostCity id: ny/dallas/atlanta/tor/mx
+    const host = answers.hostCity || '';
+    return normalizeCityKey(selectedMatch?.city, host);
+  }, [selectedMatch?.city, answers.hostCity]);
 
-    risks.push({
-      icon: '🏨',
-      title: isArabic ? 'الإقامة تُحسم مبكرًا' : 'Accommodation gets decided early',
-      body: isArabic
-        ? (budgetLow || stayingBudgetish
-            ? 'في أسبوع المباراة قد تختفي الخيارات المناسبة بسرعة. احجز خيارًا بإلغاء مرن واحفظ خيارًا احتياطيًا.'
-            : 'حتى مع ميزانية جيدة، الأسعار قد تقفز فجأة قبل المباراة. الحجز المبكر مع إلغاء مرن يقلل المخاطرة.')
-        : (budgetLow || stayingBudgetish
-            ? 'In match week, good-value options disappear fast. Book a flexible option and keep a backup.'
-            : 'Even with a good budget, prices can jump close to match week. Early booking with flexible cancellation reduces risk.')
-    });
+  const cityName = useMemo(() => {
+    const map = {
+      ny: { en: 'New York / New Jersey', ar: 'نيويورك / نيوجيرسي' },
+      dallas: { en: 'Dallas, Texas', ar: 'دالاس - تكساس' },
+      atlanta: { en: 'Atlanta, Georgia', ar: 'أتلانتا - جورجيا' },
+      tor: { en: 'Toronto, Canada', ar: 'تورونتو - كندا' },
+      mx: { en: 'Mexico City, Mexico', ar: 'مكسيكو سيتي - المكسيك' },
+    } as const;
+    return isArabic ? map[cityKey].ar : map[cityKey].en;
+  }, [cityKey, isArabic]);
 
-    risks.push({
-      icon: '🚦',
-      title: isArabic ? 'المسافة لا تعني سهولة التنقل' : 'Distance doesn’t equal ease',
-      body: isArabic
-        ? 'المهم هو: طريق العودة ليلًا بعد المباراة. تجنب أماكن تتطلب تبديلات كثيرة أو مشي طويل في شوارع فارغة.'
-        : 'What matters is your late-night return route. Avoid plans with many transfers or long walks on empty streets.'
-    });
-
-    risks.push({
-      icon: '🛡️',
-      title: isArabic ? 'التأمين: قد تدفع آلافًا ثم تنتظر التعويض' : 'Insurance: you may pay thousands first',
-      body: isArabic
-        ? 'في أمريكا، زيارة طوارئ/فحوصات قد تكون باهظة. كثير من الخطط تعوّض لاحقًا، لذلك ابحث عن خطة يمكنها ترتيب الدفع للحالات المكلفة عبر المساعدة.'
-        : 'In the US, ER/medical care can be very expensive. Many plans reimburse later, so look for plans that can coordinate care and arrange payment for expensive cases via assistance.'
-    });
-
-    return risks.slice(0, 3);
-  }, [answers.budget, answers.accommodation, isArabic]);
-
-  const cityGuidance = useMemo(() => {
-    const cityKey = normalizeCityKey(selectedMatch?.city);
+  const riskProfiles = useMemo(() => {
     const T = (en: string, ar: string) => (isArabic ? ar : en);
 
-    const whereToStay: CardItem[] = [];
-    const beCareful: CardItem[] = [];
-    const smartLinks: { label: string; href: string }[] = [];
+    const byCity: Record<typeof cityKey, { areas: CardItem[]; bumps: CardItem[]; top3: RiskWithFix[]; smartLinks: { label: string; href: string }[] }> = {
+      ny: {
+        areas: [
+          { icon: '✅', title: T('Midtown Manhattan', 'ميدتاون مانهاتن'), body: T('Easiest logistics: subways, food, late-night options.', 'أسهل لوجستيات: مترو، طعام، وخيارات ليلًا.') },
+          { icon: '✅', title: T('Upper West Side', 'أبر ويست سايد'), body: T('Family-friendly feel, parks, good transit coverage.', 'مناسب للعائلة نسبيًا، حدائق، ومواصلات جيدة.') },
+          { icon: '✅', title: T('Jersey City / Hoboken (MetLife-friendly)', 'جيرسي سيتي / هوبوكن (مناسب لـ MetLife)'), body: T('Often better value + simpler match-day return if at MetLife.', 'قيمة أفضل غالبًا + عودة أسهل يوم المباراة إذا كانت في MetLife.') },
+        ],
+        bumps: [
+          { icon: '⚠️', title: T('“Cheap next to station” with 2–3 transfers', '“رخيص بجانب محطة” مع 2–3 تبديلات'), body: T('It looks fine on maps, then feels exhausting at 11pm.', 'يبدو جيدًا على الخريطة ثم يصبح مرهقًا ليلًا.') },
+          { icon: '⚠️', title: T('Industrial blocks after dark', 'شوارع صناعية/فارغة ليلًا'), body: T('Distance is not comfort. Check the street, not only the neighborhood.', 'المسافة ليست راحة. افحص الشارع نفسه لا اسم الحي فقط.') },
+        ],
+        top3: [
+          {
+            icon: '🚇',
+            title: T('Late-night return route is the real test', 'مسار العودة ليلًا هو الاختبار الحقيقي'),
+            problem: T('A “good deal” becomes stressful when you’re tired and transferring lines.', 'الصفقة الرخيصة تصبح مرهقة عندما تكون متعبًا وتبدّل خطوطًا.'),
+            fix: T('Choose a base with a simple return: fewer transfers + shorter walk.', 'اختر قاعدة بعودة بسيطة: تبديلات أقل + مشي أقصر.')
+          },
+          {
+            icon: '🏨',
+            title: T('Match-week pricing tricks', 'حيل الأسعار في أسبوع المباراة'),
+            problem: T('Minimum nights + sudden price jumps are common.', 'شروط مدة إقامة دنيا + قفزات سعرية مفاجئة شائعة.'),
+            fix: T('Book flexible cancellation and keep a backup option saved.', 'احجز بإلغاء مرن واحفظ خيارًا احتياطيًا.')
+          },
+          {
+            icon: '🛡️',
+            title: T('Medical costs can be thousands upfront', 'التكاليف الطبية قد تكون آلافًا مقدمًا'),
+            problem: T('Many plans reimburse later, so you might pay first.', 'كثير من الخطط تعوّض لاحقًا، أي قد تدفع أنت أولًا.'),
+            fix: T('Pick coverage that can coordinate care/arrange payment for expensive cases (policy-dependent).', 'اختر تغطية تستطيع ترتيب العلاج/الدفع للحالات المكلفة (حسب الشروط).')
+          },
+        ],
+        smartLinks: [
+          { label: T('MetLife transit guide (NJ Transit)', 'دليل المواصلات إلى MetLife (NJ Transit)'), href: 'https://www.njtransit.com/meadowlands' },
+        ]
+      },
 
-    if (cityKey === 'ny') {
-      whereToStay.push(
-        {
-          icon: '✅',
-          title: T('Midtown Manhattan', 'ميدتاون مانهاتن'),
-          body: T('Simple subway connections, easy food options, and straightforward late-night returns.', 'تبديلات أقل، طعام وخدمات أكثر، وعودة ليلًا أسهل.')
-        },
-        {
-          icon: '✅',
-          title: T('Upper West Side / Upper East Side', 'أبر ويست سايد / أبر إيست سايد'),
-          body: T('Family-friendly feel, parks, and predictable transport routes.', 'مناسب للعائلات نسبيًا، قريب من الحدائق، ومسارات تنقل أوضح.')
-        },
-        {
-          icon: '✅',
-          title: T('Jersey City / Hoboken (practical for MetLife)', 'جيرسي سيتي / هوبوكن (عملي لـ MetLife)'),
-          body: T('Often better value with a simpler match-day return if the match is at MetLife.', 'قيمة أفضل غالبًا مع عودة أسهل يوم المباراة إذا كانت في MetLife.')
-        }
-      );
+      dallas: {
+        areas: [
+          { icon: '✅', title: T('Uptown / Oak Lawn', 'أبتاون / أوك لون'), body: T('Comfortable base: dining, walkable pockets, simpler logistics.', 'قاعدة مريحة: مطاعم، مناطق للمشي، ولوجستيات أسهل.') },
+          { icon: '✅', title: T('Downtown / Arts District', 'وسط المدينة / حي الفنون'), body: T('Central and practical if you rely on a clear route back.', 'مركزي وعملي إذا كان مسار العودة واضحًا.') },
+          { icon: '✅', title: T('Plano (calmer family vibe)', 'بلانو (أهدأ للعائلة)'), body: T('Good if you want calm — only if your match-day route is solid.', 'مناسب للهدوء — فقط إذا كان مسار يوم المباراة مضبوطًا.') },
+        ],
+        bumps: [
+          { icon: '⚠️', title: T('Car-first areas without a plan', 'مناطق تعتمد على السيارة بدون خطة'), body: T('You’ll pay a lot in rides if transit isn’t realistic.', 'ستدفع كثيرًا للمواصلات إن لم تكن المواصلات العامة عملية.') },
+          { icon: '⚠️', title: T('Assuming “it’s close” means easy', 'افتراض أن “قريب” يعني سهل'), body: T('Highways + event traffic can turn short distances into long trips.', 'الطرق السريعة + زحام الفعاليات يحول القريب إلى رحلة طويلة.') },
+        ],
+        top3: [
+          {
+            icon: '🚦',
+            title: T('Traffic is the hidden cost', 'الزحام هو التكلفة الخفية'),
+            problem: T('Match-day congestion can eat hours and kill the vibe.', 'زحام يوم المباراة قد يستهلك ساعات ويقتل المتعة.'),
+            fix: T('Stay in a base with a predictable return route; avoid multiple transfers + long walks.', 'اسكن في قاعدة بعودة متوقعة؛ تجنب تبديلات كثيرة ومشي طويل.')
+          },
+          {
+            icon: '💸',
+            title: T('“Cheap hotel” can become expensive', '“الفندق الرخيص” قد يصبح مكلفًا'),
+            problem: T('You save on room but spend heavily on rides and time.', 'توفّر في السكن ثم تدفع كثيرًا للمواصلات والوقت.'),
+            fix: T('Choose a comfortable base (Uptown/Downtown) even if slightly higher.', 'اختر قاعدة مريحة (أبتاون/الداون تاون) ولو أغلى قليلًا.')
+          },
+          {
+            icon: '🛡️',
+            title: T('ER/doctor can cost thousands upfront', 'الطوارئ/الطبيب قد يكلف آلافًا مقدمًا'),
+            problem: T('Many plans reimburse later — that means you may pay first.', 'كثير من الخطط تعوّض لاحقًا — أي قد تدفع أنت أولًا.'),
+            fix: T('Pick medical coverage with assistance that can coordinate/arrange payment for expensive cases (read policy).', 'اختر تغطية مع خدمة مساعدة يمكنها ترتيب العلاج/الدفع للحالات المكلفة (اقرأ الشروط).')
+          },
+        ],
+        smartLinks: [
+          { label: T('Dallas DART fares & passes', 'أسعار وتذاكر DART في دالاس'), href: 'https://www.dart.org/fare/general-fares-and-overview/fares' },
+        ]
+      },
 
-      beCareful.push(
-        {
-          icon: '⚠️',
-          title: T('“Cheap near a station” + multiple transfers', '“رخيص قرب محطة” مع تبديلات كثيرة'),
-          body: T('Always test the return route after 10–11pm. Transfers + long walks kill comfort.', 'جرّب مسار العودة بعد 10–11 مساءً. التبديلات والمشي الطويل يدمّر الراحة.')
-        },
-        {
-          icon: '⚠️',
-          title: T('Industrial/empty streets at night', 'شوارع صناعية/فارغة ليلًا'),
-          body: T('Use Street View and recent reviews for the block, not only the neighborhood name.', 'استخدم Street View ومراجعات حديثة للشارع نفسه، لا اسم الحي فقط.')
-        }
-      );
+      atlanta: {
+        areas: [
+          { icon: '✅', title: T('Midtown', 'ميدتاون'), body: T('Popular base: dining + easier day-to-day movement.', 'قاعدة شائعة: مطاعم وتنقل يومي أسهل.') },
+          { icon: '✅', title: T('Virginia-Highland', 'فيرجينيا-هايلاند'), body: T('Comfortable vibe and good for visitors (route-dependent).', 'أجواء مريحة ومناسبة للزوار (حسب المسار).') },
+          { icon: '✅', title: T('Buckhead (higher budget comfort)', 'باكهيد (راحة للميزانية الأعلى)'), body: T('Often comfortable — confirm your match-day route back.', 'غالبًا مريح — تأكد من مسار العودة يوم المباراة.') },
+        ],
+        bumps: [
+          { icon: '⚠️', title: T('Far suburbs with no MARTA plan', 'ضواحٍ بعيدة بدون خطة MARTA'), body: T('If you depend on rideshare, match-day surges add up fast.', 'إن اعتمدت على التطبيقات، الارتفاع السعري يوم المباراة يتضاعف.') },
+          { icon: '⚠️', title: T('Late-night transfers + long walk', 'تبديلات ليلية + مشي طويل'), body: T('This is where families feel uncomfortable even if the hotel is “nice”.', 'هنا تفقد العائلة الراحة حتى لو كان الفندق “جيدًا”.') },
+        ],
+        top3: [
+          {
+            icon: '🚇',
+            title: T('Your return route matters more than the venue distance', 'مسار العودة أهم من قرب الملعب'),
+            problem: T('Two areas can be equally “close”, but one has a painful return route.', 'قد تكون منطقتان “قريبتين”، لكن واحدة عودتها مرهقة.'),
+            fix: T('Choose a base with fewer transfers and safe-feeling walks (check the block).', 'اختر قاعدة بتبديلات أقل ومشي مريح (افحص الشارع).')
+          },
+          {
+            icon: '🏨',
+            title: T('Booking too late creates bad choices', 'التأخر في الحجز يخلق خيارات سيئة'),
+            problem: T('You’ll end up far away or locked into minimum-night terms.', 'ستضطر لسكن بعيد أو شروط مدة إقامة دنيا.'),
+            fix: T('Book flexible cancellation early and keep a second option saved.', 'احجز بإلغاء مرن مبكرًا واحتفظ بخيار احتياطي.')
+          },
+          {
+            icon: '🛡️',
+            title: T('Medical costs can be shocking', 'التكاليف الطبية قد تكون صادمة'),
+            problem: T('ER/doctor bills can be thousands; reimbursement can take time.', 'فواتير الطوارئ/الطبيب قد تكون آلافًا؛ التعويض قد يتأخر.'),
+            fix: T('Pick coverage with assistance for expensive cases + understand what’s reimbursed.', 'اختر تغطية مع مساعدة للحالات المكلفة وافهم ما الذي يُعوّض.')
+          },
+        ],
+        smartLinks: [
+          { label: T('Atlanta MARTA fares & passes', 'أسعار وتذاكر MARTA في أتلانتا'), href: 'https://www.itsmarta.com/fare-programs.aspx' },
+        ]
+      },
 
-      smartLinks.push({ label: T('MetLife transit guide (NJ Transit)', 'دليل المواصلات إلى MetLife (NJ Transit)'), href: 'https://www.njtransit.com/meadowlands' });
-    } else if (cityKey === 'mx') {
-      whereToStay.push(
-        { icon: '✅', title: T('Roma Norte', 'روما نورتي'), body: T('Walkable, cafes, and a popular visitor base.', 'مناسب للمشي ومطاعم ومقاهي وقاعدة شائعة للزوار.') },
-        { icon: '✅', title: T('Condesa', 'كونديزا'), body: T('Comfortable streets and a calmer feel for families.', 'شوارع مريحة وإحساس أهدأ للعائلات.') },
-        { icon: '✅', title: T('Polanco (higher budget comfort)', 'بولانكو (راحة أعلى للميزانية المرتفعة)'), body: T('More expensive but often smoother logistics.', 'أغلى لكن غالبًا أقل مطبات في التنقل والخدمات.') }
-      );
+      tor: {
+        areas: [
+          { icon: '✅', title: T('Downtown / near TTC Subway', 'وسط المدينة / قرب مترو TTC'), body: T('Predictable transit, food options, fewer surprises.', 'مواصلات أوضح، خيارات طعام، ومفاجآت أقل.') },
+          { icon: '✅', title: T('The Annex', 'ذا أنيكس'), body: T('Comfortable visitor base with good connectivity.', 'قاعدة مريحة للزوار مع اتصال جيد.') },
+          { icon: '✅', title: T('Yorkville (higher budget comfort)', 'يوركفيل (راحة للميزانية الأعلى)'), body: T('Comfort + services, easier for families.', 'راحة وخدمات وأسهل للعائلة.') },
+        ],
+        bumps: [
+          { icon: '⚠️', title: T('Relying on rideshare on match day', 'الاعتماد على التطبيقات يوم المباراة'), body: T('Surge pricing can surprise you.', 'الارتفاع السعري قد يفاجئك.') },
+          { icon: '⚠️', title: T('Choosing a base with awkward transfers', 'قاعدة بتبديلات مزعجة'), body: T('Transfers + long walks feel worse at night.', 'التبديلات + المشي الطويل يصبح أسوأ ليلًا.') },
+        ],
+        top3: [
+          {
+            icon: '🚇',
+            title: T('Transit-first planning saves money', 'التخطيط بالمواصلات يوفر المال'),
+            problem: T('Taxi/rideshare adds up quickly during events.', 'التكاسي/التطبيقات تتضاعف وقت الفعاليات.'),
+            fix: T('Stay near TTC lines and test the route back after 10pm.', 'اسكن قرب خطوط TTC واختبر العودة بعد 10 مساءً.')
+          },
+          {
+            icon: '🏨',
+            title: T('Hotels fill up near event windows', 'الفنادق تمتلئ في نافذة الفعاليات'),
+            problem: T('Prices rise and options shrink fast.', 'الأسعار ترتفع والخيارات تقل بسرعة.'),
+            fix: T('Book flexible early + keep a backup saved.', 'احجز بإلغاء مرن مبكرًا + احتفظ بخيار احتياطي.')
+          },
+          {
+            icon: '🧾',
+            title: T('Documents + addresses matter on match day', 'المستندات والعناوين مهمة يوم المباراة'),
+            problem: T('Bad connectivity or low battery causes stress.', 'ضعف الإنترنت أو نفاد البطارية يسبب توترًا.'),
+            fix: T('Save PDFs, ticket info, and hotel address offline.', 'احفظ التذاكر وPDF والعناوين بدون إنترنت.')
+          },
+        ],
+        smartLinks: [
+          { label: T('TTC fares & passes (PRESTO)', 'أسعار وتذاكر TTC (PRESTO)'), href: 'https://www.ttc.ca/Fares-and-passes' },
+        ]
+      },
 
-      beCareful.push(
-        { icon: '⚠️', title: T('Long late-night routes with transfers', 'مسارات ليلية طويلة مع تبديلات'), body: T('Pick a base that keeps the return route simple.', 'اختر قاعدة تجعل العودة سهلة ومباشرة.') },
-        { icon: '⚠️', title: T('Over-optimistic “10 minutes away” pins', 'دبابيس “10 دقائق” المتفائلة'), body: T('Traffic changes everything. Base decisions on routes, not distance.', 'الزحام يغيّر كل شيء. قرر بناءً على المسار لا المسافة.') }
-      );
+      mx: {
+        areas: [
+          { icon: '✅', title: T('Roma Norte', 'روما نورتي'), body: T('Walkable, cafes, visitor-friendly base.', 'مناسبة للمشي ومقاهي وقاعدة محببة للزوار.') },
+          { icon: '✅', title: T('Condesa', 'كونديزا'), body: T('Comfortable streets and calmer vibe.', 'شوارع مريحة وأجواء أهدأ.') },
+          { icon: '✅', title: T('Polanco (higher budget comfort)', 'بولانكو (راحة للميزانية الأعلى)'), body: T('More expensive, often smoother logistics.', 'أغلى لكن غالبًا لوجستيات أسهل.') },
+        ],
+        bumps: [
+          { icon: '⚠️', title: T('Over-optimistic map pins', 'دبابيس خريطة متفائلة'), body: T('Traffic can turn “close” into a long trip.', 'الزحام يحول “قريب” إلى رحلة طويلة.') },
+          { icon: '⚠️', title: T('Late-night transfers', 'تبديلات ليلية'), body: T('Choose a base with a simple return route.', 'اختر قاعدة بعودة بسيطة ومباشرة.') },
+        ],
+        top3: [
+          {
+            icon: '🚦',
+            title: T('Traffic is the hidden schedule killer', 'الزحام هو قاتل الجدول'),
+            problem: T('A short distance can become a 60–90 min ride.', 'مسافة قصيرة قد تصبح 60–90 دقيقة.'),
+            fix: T('Pick a base that works for your daily plan, not only the venue.', 'اختر قاعدة تناسب يومك كاملًا، لا الملعب فقط.')
+          },
+          {
+            icon: '🏨',
+            title: T('Match week pricing + minimum nights', 'أسعار أسبوع المباراة + مدة إقامة دنيا'),
+            problem: T('You might be forced into longer stays or worse locations.', 'قد تُجبر على إقامة أطول أو موقع أسوأ.'),
+            fix: T('Book flexible early and keep options saved.', 'احجز بإلغاء مرن مبكرًا واحتفظ بخيارات محفوظة.')
+          },
+          {
+            icon: '🧠',
+            title: T('Comfort comes from predictability', 'الراحة تأتي من وضوح الخطة'),
+            problem: T('Unclear return routes create stress after big events.', 'عدم وضوح العودة يخلق توترًا بعد الفعاليات.'),
+            fix: T('Test a night return route on maps before booking.', 'اختبر مسار العودة ليلًا على الخريطة قبل الحجز.')
+          },
+        ],
+        smartLinks: [
+          { label: T('Mobility card overview', 'نظرة عامة على بطاقة المواصلات'), href: 'https://mexicocity.cdmx.gob.mx/e/getting-around/mexico-city-metro-card/' },
+        ]
+      },
+    };
 
-      smartLinks.push({ label: T('Integrated mobility card overview', 'نظرة عامة على بطاقة المواصلات الموحدة'), href: 'https://mexicocity.cdmx.gob.mx/e/getting-around/mexico-city-metro-card/' });
-    } else if (cityKey === 'tor') {
-      whereToStay.push(
-        { icon: '✅', title: T('Downtown / near TTC Subway', 'وسط المدينة / قرب مترو TTC'), body: T('Predictable transit + food options + less taxi dependency.', 'مواصلات أوضح + خيارات طعام + اعتماد أقل على التكاسي.') },
-        { icon: '✅', title: T('The Annex / Yorkville (comfort)', 'ذا أنيكس / يوركفيل (راحة)'), body: T('Often comfortable and easy to navigate for visitors.', 'غالبًا مريح وسهل للزوار.') },
-        { icon: '✅', title: T('West Queen West', 'ويست كوين ويست'), body: T('Popular base with good access if your route is simple.', 'قاعدة شائعة إذا كان المسار واضحًا وسهلًا.') }
-      );
+    return byCity;
+  }, [isArabic, cityKey]);
 
-      beCareful.push(
-        { icon: '⚠️', title: T('Relying on rideshare on match day', 'الاعتماد على أوبر/ليفت يوم المباراة'), body: T('Event surges can be expensive. Transit plan is calmer.', 'الطلب وقت الفعاليات يرفع السعر. المواصلات غالبًا أهدأ.') }
-      );
+  const profile = riskProfiles[cityKey];
 
-      smartLinks.push({ label: T('TTC fares & passes (PRESTO)', 'أسعار وتذاكر TTC (PRESTO)'), href: 'https://www.ttc.ca/Fares-and-passes' });
-    } else if (cityKey === 'dal_atl') {
-      // Dallas + Atlanta are different, but we still give named comfortable bases for both.
-      // We detect which one user likely means by their mental model; here we show both with clear labeling.
-      whereToStay.push(
-        {
-          icon: '✅',
-          title: T('Dallas: Uptown / Oak Lawn', 'دالاس: أبتاون / أوك لون'),
-          body: T('Walkable pockets, food options, and usually easier logistics than far suburbs.', 'مناطق فيها مشي وخيارات طعام وخدمات، وغالبًا أسهل من الضواحي البعيدة.')
-        },
-        {
-          icon: '✅',
-          title: T('Dallas: Downtown / Arts District', 'دالاس: وسط المدينة / حي الفنون'),
-          body: T('Central base, easier planning if you rely on transit/rideshare.', 'قاعدة مركزية أسهل للتخطيط إن كنت تعتمد على المواصلات/التطبيقات.')
-        },
-        {
-          icon: '✅',
-          title: T('Dallas: Plano (if you want calm + family)', 'دالاس: بلانو (هدوء للعائلة)'),
-          body: T('More suburban and calm. Choose it only if your match-day route is clear.', 'ضاحية أهدأ. اخترها فقط إذا كان مسار يوم المباراة واضحًا.')
-        },
-        {
-          icon: '✅',
-          title: T('Atlanta: Midtown / Virginia-Highland', 'أتلانتا: ميدتاون / فيرجينيا-هايلاند'),
-          body: T('Popular visitor areas with dining and easier day-to-day movement.', 'مناطق شائعة للزوار مع مطاعم وتنقل يومي أسهل.')
-        },
-        {
-          icon: '✅',
-          title: T('Atlanta: Buckhead (higher budget comfort)', 'أتلانتا: باكهيد (راحة للميزانية الأعلى)'),
-          body: T('Often comfortable, but always confirm match-day route to the venue.', 'غالبًا مريح، لكن تأكد من مسار الذهاب والعودة يوم المباراة.')
-        }
-      );
-
-      beCareful.push(
-        {
-          icon: '⚠️',
-          title: T('“Cheap far away” with no transit plan', '“رخيص بعيد” بدون خطة مواصلات'),
-          body: T('Some areas are car-first. Without a clear route, you’ll pay a lot in rides.', 'بعض المناطق تعتمد على السيارة. بدون مسار واضح ستدفع كثيرًا في المواصلات.')
-        },
-        {
-          icon: '⚠️',
-          title: T('Assuming walking works everywhere', 'افتراض أن المشي خيار دائمًا'),
-          body: T('Distances and road layouts can make walking unrealistic. Pick your base based on the route.', 'المسافات وتصميم الطرق قد يجعل المشي غير عملي. اختر القاعدة حسب المسار.')
-        }
-      );
-
-      smartLinks.push(
-        { label: T('Dallas DART fares & passes', 'أسعار وتذاكر DART في دالاس'), href: 'https://www.dart.org/fare/general-fares-and-overview/fares' },
-        { label: T('Atlanta MARTA fares & passes', 'أسعار وتذاكر MARTA في أتلانتا'), href: 'https://www.itsmarta.com/fare-programs.aspx' }
-      );
-    } else {
-      whereToStay.push(
-        {
-          icon: '✅',
-          title: T('Choose a base near reliable transit', 'اختر قاعدة قرب مواصلات موثوقة'),
-          body: T('Pick by route (few transfers) more than price.', 'اختر حسب المسار (تبديلات أقل) أكثر من السعر.')
-        }
-      );
-      beCareful.push(
-        {
-          icon: '⚠️',
-          title: T('Isolated streets late night', 'شوارع معزولة ليلًا'),
-          body: T('Check Street View and the walk from station to hotel at night.', 'افحص Street View والمشي من المحطة للسكن ليلًا.')
-        }
-      );
-    }
-
-    return { whereToStay, beCareful, smartLinks };
-  }, [selectedMatch?.city, isArabic]);
+  const areasWithBookingLinks = useMemo(() => {
+    return profile.areas.map((a) => ({
+      ...a,
+      href: bookingAreaSearch(`${a.title} ${cityName}`, lang),
+    }));
+  }, [profile.areas, cityName, lang]);
 
   if (step === 'intro') {
     return (
@@ -366,54 +460,70 @@ export default function WorldCupPage() {
             <div className="big" style={{ fontSize: '16px' }}>{selectedMatch?.label}</div>
             <div className="small">{selectedMatch?.date} • {selectedMatch?.city}</div>
           </div>
+
+          <div className="result-item">
+            <div className="kicker">{c.yourHostCity}</div>
+            <div className="big" style={{ fontSize: '16px' }}>{cityName}</div>
+          </div>
+
           <div className="result-item">
             <div className="kicker">{c.yourBudget}</div>
             <div className="big" style={{ fontSize: '16px' }}>{selectedBudget?.label[lang]}</div>
           </div>
+
+          <div className="result-item">
+            <div className="kicker">{c.stayType}</div>
+            <div className="big" style={{ fontSize: '16px' }}>{selectedAccommodation?.label[lang]}</div>
+          </div>
         </div>
 
-        <div className="result-item" style={{ marginBottom: '16px' }}>
-          <div className="kicker">{c.stayType}</div>
-          <div className="big" style={{ fontSize: '16px' }}>{selectedAccommodation?.label[lang]}</div>
-        </div>
-
-        {/* Top 3 risks */}
+        {/* Top 3 pitfalls + fixes */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
           <div className="kicker">{c.risksTitle}</div>
           <div className="small" style={{ marginTop: '6px' }}>{c.risksSubtitle}</div>
           <div className="hr"></div>
           <ul className="list">
-            {topRisks.map((r, idx) => (
+            {profile.top3.map((r, idx) => (
               <li key={idx}>
                 <span style={{ marginInlineEnd: '8px' }}>{r.icon}</span>
-                <strong>{r.title}:</strong> <span>{r.body}</span>
+                <strong>{r.title}:</strong> <span>{r.problem}</span>
+                <div className="small" style={{ marginTop: '6px', fontWeight: 800 }}>
+                  {isArabic ? 'الحل: ' : 'Fix: '}
+                  <span style={{ fontWeight: 600 }}>{r.fix}</span>
+                </div>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Where to stay */}
+        {/* Comfortable areas (clickable) */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
           <div className="kicker">{c.whereToStayTitle}</div>
           <div className="small" style={{ marginTop: '6px' }}>{c.whereToStaySubtitle}</div>
           <div className="hr"></div>
-          <ul className="list">
-            {cityGuidance.whereToStay.map((p, idx) => (
-              <li key={idx}>
-                <span style={{ marginInlineEnd: '8px' }}>{p.icon}</span>
-                <strong>{p.title}:</strong> <span>{p.body}</span>
-              </li>
+
+          <div className="grid two" style={{ marginTop: '12px' }}>
+            {areasWithBookingLinks.map((a) => (
+              <div className="linkcard" key={a.title}>
+                <a href={a.href} target="_blank" rel="noopener noreferrer">
+                  <div style={{ fontWeight: 900 }}>{a.icon} {a.title}</div>
+                  <div className="small" style={{ marginTop: '6px' }}>{a.body}</div>
+                  <div className="small" style={{ marginTop: '8px', opacity: 0.9 }}>
+                    {isArabic ? 'ابحث عن سكن هنا' : 'Search stays here'}
+                  </div>
+                </a>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
 
-        {/* Comfort pitfalls */}
+        {/* Comfort bumps */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
           <div className="kicker">{c.beCarefulTitle}</div>
           <div className="small" style={{ marginTop: '6px' }}>{c.beCarefulSubtitle}</div>
           <div className="hr"></div>
           <ul className="list">
-            {cityGuidance.beCareful.map((p, idx) => (
+            {profile.bumps.map((p, idx) => (
               <li key={idx}>
                 <span style={{ marginInlineEnd: '8px' }}>{p.icon}</span>
                 <strong>{p.title}:</strong> <span>{p.body}</span>
@@ -422,63 +532,40 @@ export default function WorldCupPage() {
           </ul>
         </div>
 
-        {/* Insurance */}
+        {/* Insurance reality check */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
           <div className="kicker">{c.insuranceTitle}</div>
-          <div className="small" style={{ marginTop: '6px' }}>{c.insuranceSubtitle}</div>
-          <div className="small" style={{ marginTop: '10px', fontWeight: 800 }}>
-            {c.insuranceTip}
+          <div className="small" style={{ marginTop: '6px' }}>{c.insuranceBody}</div>
+          <div className="small" style={{ marginTop: '10px', fontWeight: 900 }}>
+            {c.insuranceFix}
           </div>
         </div>
 
-        {/* Next steps */}
-        <div className="card" style={{ background: 'hsl(var(--soft))' }}>
-          <div className="kicker">{c.nextSteps}</div>
+        {/* Quick plan */}
+        <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
+          <div className="kicker">{c.quickPlanTitle}</div>
+          <div className="hr"></div>
           <ul className="list">
-            <li>✈️ {c.bookFlights}</li>
-            <li>🏨 {c.bookAccommodation}</li>
-            <li>🛡️ {c.travelInsurance}</li>
-            <li>🎫 {c.localTours}</li>
+            <li>✅ {c.action1}</li>
+            <li>✅ {c.action2}</li>
+            <li>✅ {c.action3}</li>
+            <li>✅ {c.action4}</li>
           </ul>
         </div>
 
         <div className="hr"></div>
 
-        <div className="kicker">{c.smartLinksTitle}</div>
-        <div className="grid two" style={{ marginTop: '12px' }}>
-          {cityGuidance.smartLinks.map((l) => (
-            <div className="linkcard" key={l.href}>
-              <a href={l.href} target="_blank" rel="noopener noreferrer">
-                {l.label}
-              </a>
-            </div>
-          ))}
-          <div className="linkcard">
-            <a
-              href={selectedMatch?.city ? `https://www.google.com/search?q=${encodeURIComponent(selectedMatch.city + ' best areas to stay tourists')}` : 'https://www.google.com/search?q=best+areas+to+stay+world+cup+city'}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {isArabic ? 'أفضل مناطق السكن (بحث سريع)' : 'Best areas to stay (quick search)'}
-            </a>
-          </div>
-          <div className="linkcard">
-            <a
-              href={selectedMatch?.city ? `https://www.google.com/search?q=${encodeURIComponent(selectedMatch.city + ' transit day pass week pass card')}` : 'https://www.google.com/search?q=city+transit+weekly+pass'}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {isArabic ? 'تذاكر المواصلات (بحث سريع)' : 'Transit passes (quick search)'}
-            </a>
-          </div>
-        </div>
-
-        <div className="hr"></div>
-
-        <div className="kicker">{c.usefulLinks}</div>
+        {/* Smart links */}
+        <div className="kicker">{c.linksTitle}</div>
         <div className="small" style={{ marginTop: '6px' }}>{c.linkHint}</div>
 
         <div className="grid two" style={{ marginTop: '12px' }}>
+          {profile.smartLinks.map((l) => (
+            <div className="linkcard" key={l.href}>
+              <a href={l.href} target="_blank" rel="noopener noreferrer">{l.label}</a>
+            </div>
+          ))}
+
           <div className="linkcard">
             <a href={AFFILIATE.skyscanner} target="_blank" rel="noopener noreferrer">
               {isArabic ? 'Skyscanner - حجز الطيران' : 'Skyscanner - Book Flights'}
@@ -514,6 +601,7 @@ export default function WorldCupPage() {
     );
   }
 
+  // Intro -> Match -> (Host if needed) -> Budget -> Accommodation -> Results
   return (
     <div className="card">
       <div className="kicker">{t.nav_wc}</div>
@@ -537,13 +625,36 @@ export default function WorldCupPage() {
               <div
                 key={match.id}
                 className={`option ${answers.match === match.id ? 'selected' : ''}`}
-                onClick={() => handleSelect('match', match.id)}
+                onClick={() => {
+                  // reset hostCity if match changes
+                  setAnswers(prev => ({ ...prev, match: match.id, hostCity: '' }));
+                }}
               >
                 <div>
                   <div style={{ fontWeight: 900 }}>{match.label}</div>
                   <div className="small" style={{ margin: 0 }}>{match.date} • {match.city}</div>
                 </div>
                 {answers.match === match.id && <span className="badge ok">✓</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 'host' && (
+        <>
+          <div className="big">{c.hostQuestion}</div>
+          <div className="small" style={{ marginTop: '8px' }}>{c.hostHelper}</div>
+          <div className="hr"></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {HOST_CHOICES.map((hc) => (
+              <div
+                key={hc.id}
+                className={`option ${answers.hostCity === hc.id ? 'selected' : ''}`}
+                onClick={() => handleSelect('hostCity', hc.id)}
+              >
+                <div style={{ fontWeight: 900 }}>{hc.label[lang]}</div>
+                {answers.hostCity === hc.id && <span className="badge ok">✓</span>}
               </div>
             ))}
           </div>
@@ -598,6 +709,7 @@ export default function WorldCupPage() {
           onClick={goNext}
           disabled={
             (step === 'match' && !answers.match) ||
+            (step === 'host' && !answers.hostCity) ||
             (step === 'budget' && !answers.budget) ||
             (step === 'accommodation' && !answers.accommodation)
           }
