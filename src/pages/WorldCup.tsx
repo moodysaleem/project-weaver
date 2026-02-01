@@ -32,17 +32,8 @@ const ACCOMMODATIONS = [
   { id: 'friends', label: { en: 'Staying with friends/family', ar: 'مع أصدقاء/عائلة' } },
 ];
 
-type RiskItem = {
-  icon: string;
-  title: string;
-  body: string;
-};
-
-type PitfallCard = {
-  icon: string;
-  title: string;
-  body: string;
-};
+type RiskItem = { icon: string; title: string; body: string };
+type CardItem = { icon: string; title: string; body: string };
 
 function normalizeCityKey(city?: string): 'ny' | 'mx' | 'tor' | 'dal_atl' | 'various' {
   if (!city) return 'various';
@@ -86,12 +77,17 @@ export default function WorldCupPage() {
       usefulLinks: 'Useful Links',
       startOver: 'Start Over',
 
-      // New sections
       risksTitle: 'Top 3 “things people don’t expect” (based on your answers)',
       risksSubtitle: 'This is where travelers lose time, money, or peace of mind.',
-      cityPitfallsTitle: 'City-specific pitfalls (the “locals know this” part)',
-      cityPitfallsSubtitle: 'These are practical traps that don’t show up in generic guides.',
-      linkHint: 'Use the links below after you review the risks + city pitfalls.',
+
+      whereToStayTitle: 'Where to stay (recommended bases)',
+      whereToStaySubtitle: 'These are areas that tend to be convenient for visitors: walkable, food options, and simpler transport.',
+      beCarefulTitle: 'Be careful with… (common comfort pitfalls)',
+      beCarefulSubtitle: 'Not “danger”, but places that often feel isolated, inconvenient late-night, or family-unfriendly depending on the block.',
+      insuranceTitle: 'Insurance reality check (so you don’t get surprised)',
+      insuranceSubtitle: 'Flight “insurance” is not the same as medical coverage after you land. Here is the practical difference.',
+      smartLinksTitle: 'Smart links (specific, not generic)',
+      linkHint: 'Use the links below after you review the risks + city guidance.',
       note: 'Note: this tool is guidance, not official legal/travel advice.'
     },
     ar: {
@@ -116,12 +112,17 @@ export default function WorldCupPage() {
       usefulLinks: 'روابط مفيدة',
       startOver: 'ابدأ من جديد',
 
-      // New sections
       risksTitle: 'أهم 3 أمور “قد لا تتوقعها” (حسب إجاباتك)',
       risksSubtitle: 'هنا عادةً يخسر المسافر وقتًا أو مالًا أو راحة بال.',
-      cityPitfallsTitle: 'فخاخ خاصة بالمدينة (هذه أشياء يعرفها السكان)',
-      cityPitfallsSubtitle: 'نقاط عملية لا تظهر في الإرشادات العامة.',
-      linkHint: 'استخدم الروابط أدناه بعد مراجعة المخاطر وفخاخ المدينة.',
+
+      whereToStayTitle: 'أين تسكن؟ (مناطق مفضلة كقاعدة)',
+      whereToStaySubtitle: 'هذه مناطق غالبًا مناسبة للزوار: مشي أفضل، مطاعم، وتنقل أسهل.',
+      beCarefulTitle: 'انتبه لـ… (فخاخ الراحة الشائعة)',
+      beCarefulSubtitle: 'ليس “خطرًا”، لكن أماكن قد تكون معزولة أو مزعجة ليلًا أو غير مناسبة للعائلة حسب الشارع.',
+      insuranceTitle: 'توضيح مهم عن التأمين (حتى لا تتفاجأ)',
+      insuranceSubtitle: 'تأمين الطيران ليس مثل التأمين الطبي بعد الوصول. هذا الفرق العملي.',
+      smartLinksTitle: 'روابط ذكية (محددة وليست عامة)',
+      linkHint: 'استخدم الروابط أدناه بعد مراجعة المخاطر وإرشادات المدينة.',
       note: 'ملاحظة: هذه أداة إرشادية وليست استشارة رسمية.'
     }
   };
@@ -160,196 +161,254 @@ export default function WorldCupPage() {
 
   const topRisks: RiskItem[] = useMemo(() => {
     const risks: RiskItem[] = [];
-
     const budgetLow = answers.budget === 'budget';
     const stayingBudgetish = answers.accommodation === 'hostel' || answers.accommodation === 'friends';
 
-    // Risk 1: Accommodation trap
     if (budgetLow || stayingBudgetish) {
       risks.push({
         icon: '🏨',
         title: isArabic ? 'قيود الإقامة خلال أسبوع المباراة' : 'Accommodation constraints during match week',
         body: isArabic
-          ? 'خلال كأس العالم قد تفرض أماكن كثيرة حدًا أدنى لعدد الليالي وترفع الأسعار بسرعة. ركّز على “إلغاء مرن” وخيارات بديلة قريبة من المواصلات.'
-          : 'During major events, minimum-night stays and sudden price jumps are common. Prioritize “free cancellation” and keep a backup option near transit.'
+          ? 'خلال الأحداث الكبرى ترتفع الأسعار وقد تُفرض مدة إقامة دنيا. احجز خيارًا بإلغاء مرن واحفظ خيارًا احتياطيًا قريبًا من المواصلات.'
+          : 'During major events, minimum-night stays and sudden price jumps are common. Book a flexible option and keep a backup near transit.'
       });
     } else {
       risks.push({
         icon: '🏨',
-        title: isArabic ? 'ارتفاع الأسعار سريعًا' : 'Prices can spike fast (even with a good budget)',
+        title: isArabic ? 'الأسعار تقفز بسرعة حتى مع ميزانية جيدة' : 'Prices can spike fast (even with a good budget)',
         body: isArabic
-          ? 'حتى مع ميزانية متوسطة/عالية، الأسعار قد ترتفع مع اقتراب المباراة. الأفضل حجز خيار جيد مبكرًا مع إلغاء مرن بدل الانتظار.'
-          : 'Even with mid/high budget, prices often jump as match week approaches. Book a solid option early with flexible cancellation instead of waiting.'
+          ? 'الانتظار قد يجعل نفس الفندق أغلى بكثير قبل المباراة. احجز مبكرًا مع إلغاء مرن بدل المقامرة.'
+          : 'Waiting can make the same hotel much more expensive closer to match day. Book early with flexible cancellation instead of gambling.'
       });
     }
 
-    // Risk 2: Transport reality
     risks.push({
       icon: '🚇',
       title: isArabic ? 'الازدحام والتنقل يوم المباراة' : 'Match-day transport congestion',
       body: isArabic
-        ? 'يوم المباراة المواصلات تكون مزدحمة وقد تُغلق مناطق. السكن “أرخص لكنه بعيد” قد يكلفك وقتًا وراحة أكثر من المال.'
-        : 'On match days, transit gets crowded and some zones can be restricted. “Cheap but far” can cost you more in time and stress than money.'
+        ? 'يوم المباراة يختلف عن الأيام العادية. السكن “أرخص لكنه بعيد” قد يكلف وقتًا وتوترًا أكثر من المال.'
+        : 'Match day is different from normal days. “Cheaper but far” can cost you more in time and stress than money.'
     });
 
-    // Risk 3: Entry & documents
     risks.push({
       icon: '🛂',
       title: isArabic ? 'متطلبات دخول قد لا تنتبه لها' : 'Hidden entry requirements',
       body: isArabic
-        ? 'حتى لو كانت وجهتك بدون تأشيرة، قد تحتاج شروطًا مثل صلاحية الجواز، تصاريح عبور، أو إثبات تذكرة عودة. افحصها مبكرًا لتجنب مفاجآت.'
-        : 'Even visa-free travel can still require passport validity rules, transit authorizations, or return-ticket proof. Check early to avoid surprises.'
+        ? 'حتى بدون تأشيرة قد توجد شروط مثل صلاحية الجواز، تصريح عبور، أو إثبات تذكرة عودة. افحص قبل الحجز النهائي.'
+        : 'Even visa-free travel can require passport validity rules, transit authorizations, or return-ticket proof. Check before final bookings.'
     });
 
     return risks.slice(0, 3);
   }, [answers.budget, answers.accommodation, isArabic]);
 
-  const cityPitfalls: PitfallCard[] = useMemo(() => {
+  const cityGuidance = useMemo(() => {
     const cityKey = normalizeCityKey(selectedMatch?.city);
-
     const T = (en: string, ar: string) => (isArabic ? ar : en);
 
+    const whereToStay: CardItem[] = [];
+    const beCareful: CardItem[] = [];
+    const smartLinks: { label: string; href: string }[] = [];
+
     if (cityKey === 'ny') {
-      return [
+      whereToStay.push(
         {
-          icon: '🗺️',
-          title: T('“Close on the map” can feel far at night', 'القرب على الخريطة لا يعني سهولة أو راحة ليلًا'),
+          icon: '✅',
+          title: T('Manhattan (Midtown / near major subway lines)', 'مانهاتن (قرب خطوط المترو الأساسية)'),
           body: T(
-            'NYC area stays can look “10 minutes away” but become stressful late night (transfers, long walks, empty platforms). Aim for simple routes and well-lit streets.',
-            'قد يبدو السكن “قريبًا” لكن يصبح مرهقًا ليلًا (تبديل خطوط، مشي طويل، محطات فارغة). اختر مسارًا بسيطًا وشوارع مضيئة.'
+            'Often easiest for families: more services, simpler navigation, late-night options, and fewer transfer headaches.',
+            'غالبًا الأسهل للعائلات: خدمات أكثر، تنقل أبسط، خيارات ليلًا، وتبديلات أقل.'
           )
         },
         {
-          icon: '💳',
-          title: T('Use OMNY fare capping instead of guessing tickets', 'استخدم حدّ OMNY الأسبوعي بدل الحيرة بالتذاكر'),
+          icon: '✅',
+          title: T('Jersey City / Hoboken (practical base)', 'جيرسي سيتي / هوبوكن (قاعدة عملية)'),
           body: T(
-            'In NYC, OMNY has a weekly fare cap concept (you stop paying after a threshold). It’s often simpler than planning passes in advance.',
-            'في نيويورك، نظام OMNY فيه “حد أسبوعي” (تتوقف عن الدفع بعد حد معين). غالبًا أسهل من شراء باقات مسبقًا.'
-          )
-        },
-        {
-          icon: '⏱️',
-          title: T('Build “buffer time” for match day', 'ضع وقتًا احتياطيًا يوم المباراة'),
-          body: T(
-            'Even locals add buffer time on event days. Plan to arrive earlier than you think, especially if you have kids or multiple transfers.',
-            'حتى السكان يضيفون وقتًا احتياطيًا في أيام الفعاليات. خطط للوصول مبكرًا خصوصًا مع الأطفال أو تبديلات متعددة.'
+            'Usually more space for the money while still being connected. Great if your match is at MetLife and you want simpler return routes.',
+            'عادةً مساحة أكبر مقابل السعر مع اتصال جيد. خيار عملي إذا كانت المباراة في MetLife وتريد عودة أسهل.'
           )
         }
-      ];
-    }
+      );
 
-    if (cityKey === 'mx') {
-      return [
+      beCareful.push(
         {
-          icon: '🚇',
-          title: T('Rush-hour crowding is real', 'الازدحام في أوقات الذروة حقيقي'),
+          icon: '⚠️',
+          title: T('“Cheapest deal” right next to a station', '“أرخص خيار” بجانب محطة'),
           body: T(
-            'Mexico City transit can be extremely crowded at peak times. If your family is not used to it, plan travel outside rush hours when possible.',
-            'مواصلات مكسيكو سيتي قد تكون مزدحمة جدًا في الذروة. إن لم تكن العائلة معتادة، حاول تجنب الذروة قدر الإمكان.'
+            'A cheap pin can still mean a stressful walk at night or multiple transfers. Always check the route back after 10–11pm.',
+            'قد يكون السكن رخيصًا لكن العودة ليلًا مرهقة أو بتبديلات كثيرة. افحص مسار العودة بعد 10–11 مساءً.'
           )
         },
         {
-          icon: '💳',
-          title: T('Get an integrated transit card early', 'احصل على بطاقة مواصلات موحّدة مبكرًا'),
+          icon: '⚠️',
+          title: T('Industrial/empty streets after dark', 'شوارع صناعية/فارغة ليلًا'),
           body: T(
-            'A single integrated card is commonly used across multiple transit modes. Buying it early reduces friction and stress.',
-            'هناك بطاقة موحّدة تُستخدم في أكثر من وسيلة مواصلات. شراؤها مبكرًا يقلل التوتر والوقت.'
-          )
-        },
-        {
-          icon: '🌆',
-          title: T('Pick neighborhoods for walkability, not just price', 'اختر الحي للمشي والراحة وليس للسعر فقط'),
-          body: T(
-            'Some areas feel fine daytime but uncomfortable late. Prioritize walkable streets, lighting, and easy transit back after night matches.',
-            'بعض المناطق قد تكون جيدة نهارًا وغير مريحة ليلًا. ركّز على سهولة المشي والإضاءة وسهولة العودة بالمواصلات.'
+            'Some areas feel fine daytime but uncomfortable late-night for families. Use Street View + recent reviews, not only distance.',
+            'بعض المناطق جيدة نهارًا لكنها غير مريحة ليلًا للعائلات. اعتمد على Street View ومراجعات حديثة لا على المسافة فقط.'
           )
         }
-      ];
-    }
+      );
 
-    if (cityKey === 'tor') {
-      return [
+      smartLinks.push(
+        { label: T('How to get to MetLife by transit (NJ Transit)', 'الوصول إلى MetLife بالمواصلات (NJ Transit)'), href: 'https://www.njtransit.com/meadowlands' }
+      );
+    } else if (cityKey === 'mx') {
+      whereToStay.push(
         {
-          icon: '🚋',
-          title: T('Don’t assume “a short drive” is easy', 'لا تفترض أن “المسافة بالسيارة قصيرة” يعني سهولة'),
+          icon: '✅',
+          title: T('Roma / Condesa (walkable base)', 'روما / كونديزا (مناسبة للمشي)'),
           body: T(
-            'Traffic and event surges can make car/taxi plans expensive. Staying near reliable transit often beats relying on rideshare.',
-            'الازدحام وقت الفعاليات قد يجعل السيارة/التاكسي مكلفًا. السكن قرب مواصلات موثوقة غالبًا أفضل من الاعتماد على التطبيقات.'
+            'Often picked by visitors for cafes, parks, and walkability. Usually feels easier day-to-day than “random cheap” districts.',
+            'يختارها كثير من الزوار للمشي والمقاهي والحدائق. غالبًا أسهل من مناطق “رخيصة لكن عشوائية”.'
           )
         },
         {
-          icon: '💳',
-          title: T('Use PRESTO for transit convenience', 'استخدم PRESTO لسهولة التنقل'),
+          icon: '✅',
+          title: T('Polanco (higher budget comfort)', 'بولانكو (راحة أعلى للميزانية المرتفعة)'),
           body: T(
-            'Toronto uses PRESTO for transit fares; it’s usually the smoothest option for visitors using public transport.',
-            'تورونتو تستخدم بطاقة PRESTO للدفع في المواصلات، وغالبًا هي الأسهل للزوار.'
-          )
-        },
-        {
-          icon: '🏨',
-          title: T('Hotels can “look central” but isolate you', 'بعض الفنادق تبدو مركزية لكنها تعزلك'),
-          body: T(
-            'Check whether the route back at night is simple (few transfers, safe-feeling walk). A “central” pin can still be inconvenient.',
-            'تأكد أن العودة ليلًا سهلة (تبديلات قليلة، مشي مريح). علامة “مركزي” قد تكون خادعة.'
+            'More expensive but often calmer and easier for families. If budget allows, it reduces friction.',
+            'أغلى لكنها غالبًا أهدأ وأسهل للعائلات. إن سمحت الميزانية فهي تقلل المتاعب.'
           )
         }
-      ];
-    }
+      );
 
-    if (cityKey === 'dal_atl') {
-      return [
+      beCareful.push(
         {
-          icon: '🚗',
-          title: T('Car-first reality: budget for rides if needed', 'واقع الاعتماد على السيارة: ضع ميزانية للنقل'),
+          icon: '⚠️',
+          title: T('Late-night returns with multiple transfers', 'عودة ليلًا بتبديلات كثيرة'),
           body: T(
-            'Some US cities are car-oriented. If you can’t rent a car, choose accommodation with a clear transit plan or budget for rides.',
-            'بعض المدن تعتمد على السيارة. إن لم تستأجر سيارة، اختر سكنًا مع خطة مواصلات واضحة أو ضع ميزانية للتنقل.'
+            'A route that looks fine at 2pm can feel exhausting late-night. Favor direct routes back to your base.',
+            'مسار يبدو جيدًا نهارًا قد يصبح متعبًا ليلًا. فضّل طرق العودة المباشرة.'
           )
         },
         {
-          icon: '🚌',
-          title: T('Know your local transit system options', 'اعرف خيارات المواصلات المحلية'),
+          icon: '⚠️',
+          title: T('Over-optimistic “10 minutes away” map pins', 'دبابيس “10 دقائق” المتفائلة'),
           body: T(
-            'Check the main transit operator and whether day/month passes exist. That can save a lot versus repeated taxis.',
-            'تحقق من الجهة المسؤولة عن المواصلات وهل توجد تذاكر يومية/شهرية. قد توفر كثيرًا مقارنة بالتكاسي.'
-          )
-        },
-        {
-          icon: '⏱️',
-          title: T('Distances are bigger than they look', 'المسافات أكبر مما تبدو'),
-          body: T(
-            'A “few miles” can still mean long travel time. Choose your stay based on the match-day route, not just price.',
-            'حتى “عدة أميال” قد تعني وقتًا طويلًا. اختر السكن بناءً على طريق يوم المباراة لا على السعر فقط.'
+            'Traffic and big-city reality can turn short distances into long trips. Prefer neighborhoods that work for both match day and normal day.',
+            'الزحام قد يجعل المسافة القصيرة طويلة. اختر حيًا يناسب يوم المباراة واليوم العادي.'
           )
         }
-      ];
+      );
+
+      smartLinks.push(
+        { label: T('Mexico City integrated mobility card (overview)', 'بطاقة المواصلات الموحدة في مكسيكو سيتي'), href: 'https://mexicocity.cdmx.gob.mx/e/getting-around/mexico-city-metro-card/' }
+      );
+    } else if (cityKey === 'tor') {
+      whereToStay.push(
+        {
+          icon: '✅',
+          title: T('Downtown / near a TTC subway line', 'وسط المدينة / قرب خط TTC'),
+          body: T(
+            'Usually simplest for visitors: predictable routes, food options, and less dependence on taxis.',
+            'عادةً الأسهل للزوار: مسارات أوضح، خيارات طعام، واعتماد أقل على التكاسي.'
+          )
+        },
+        {
+          icon: '✅',
+          title: T('West Queen West / Liberty Village (popular base)', 'ويست كوين ويست / ليبرتي فيلاج (مناطق شائعة)'),
+          body: T(
+            'Often convenient for cafes and getting around. Always verify your exact transit route to the stadium area.',
+            'مناطق مريحة للمشي والمقاهي. فقط تأكد من مسار المواصلات حسب موقع المباراة.'
+          )
+        }
+      );
+
+      beCareful.push(
+        {
+          icon: '⚠️',
+          title: T('Assuming rideshare will be cheap on match day', 'افتراض أن أوبر/ليفت ستكون رخيصة يوم المباراة'),
+          body: T(
+            'Event surges can get expensive. A transit-based plan is usually calmer.',
+            'الطلب وقت الفعاليات يرفع السعر. خطة تعتمد على المواصلات غالبًا أهدأ.'
+          )
+        }
+      );
+
+      smartLinks.push(
+        { label: T('TTC fares and passes (PRESTO)', 'أسعار وتذاكر TTC (PRESTO)'), href: 'https://www.ttc.ca/Fares-and-passes' }
+      );
+    } else if (cityKey === 'dal_atl') {
+      whereToStay.push(
+        {
+          icon: '✅',
+          title: T('Stay where your return route is simple', 'اسكن حيث تكون العودة سهلة وواضحة'),
+          body: T(
+            'In some US cities, distances are bigger than expected. A “good” base is one with a predictable route back after the match.',
+            'في بعض المدن الأمريكية المسافات أكبر مما تتوقع. “القاعدة الجيدة” هي التي تضمن عودة واضحة بعد المباراة.'
+          )
+        }
+      );
+
+      beCareful.push(
+        {
+          icon: '⚠️',
+          title: T('Car-first neighborhoods without a plan', 'مناطق تعتمد على السيارة بدون خطة'),
+          body: T(
+            'If you’re not renting a car, don’t choose a place that forces you into repeated expensive rides.',
+            'إن لم تستأجر سيارة، لا تختَر سكنًا يجبرك على مواصلات مكلفة كل مرة.'
+          )
+        }
+      );
+
+      smartLinks.push(
+        { label: T('Dallas DART fares & passes', 'أسعار وتذاكر DART في دالاس'), href: 'https://www.dart.org/fare/general-fares-and-overview/fares' }
+      );
+    } else {
+      whereToStay.push(
+        {
+          icon: '✅',
+          title: T('Pick your base by the match-day route', 'اختر قاعدتك حسب مسار يوم المباراة'),
+          body: T(
+            'Don’t pick purely by price. Pick by: easy transit, fewer transfers, and a calm return plan after night matches.',
+            'لا تختَر بالسعر فقط. اختر حسب: مواصلات سهلة، تبديلات أقل، وخطة عودة مريحة بعد المباريات الليلية.'
+          )
+        }
+      );
+      beCareful.push(
+        {
+          icon: '⚠️',
+          title: T('Isolated/empty streets after dark', 'شوارع فارغة/معزولة ليلًا'),
+          body: T(
+            'Use Street View + recent reviews and check the walk from station to hotel late at night.',
+            'استخدم Street View ومراجعات حديثة وافحص المشي من المحطة للسكن ليلًا.'
+          )
+        }
+      );
     }
 
-    // Various / fallback
+    return { whereToStay, beCareful, smartLinks };
+  }, [selectedMatch?.city, isArabic]);
+
+  const insuranceGuidance: CardItem[] = useMemo(() => {
+    const T = (en: string, ar: string) => (isArabic ? ar : en);
+
     return [
       {
-        icon: '🧭',
-        title: isArabic ? 'ابدأ بالخطة قبل التفاصيل' : 'Start with the route, then the details',
-        body: isArabic
-          ? 'اختر سكنًا بناءً على “كيف ستصل وتعود يوم المباراة”، ثم قرر التفاصيل الأخرى.'
-          : 'Pick accommodation based on “how you will get there and back on match day”, then decide the rest.'
+        icon: '🧠',
+        title: T('Flight “insurance” ≠ medical coverage', 'تأمين الطيران ≠ تغطية طبية'),
+        body: T(
+          'Airline/credit-card coverage is often about delays/cancellation. Medical costs after you land can be separate.',
+          'تغطية شركة الطيران/البطاقة غالبًا تتعلق بالتأخير أو الإلغاء. التكاليف الطبية بعد الوصول شيء آخر.'
+        )
       },
       {
-        icon: '🛡️',
-        title: isArabic ? 'فكّر في الطوارئ مبكرًا' : 'Think about emergencies early',
-        body: isArabic
-          ? 'أين أقرب مستشفى/صيدلية؟ وكيف ستتواصل؟ هذه أشياء بسيطة لكنها تمنح راحة بال.'
-          : 'Where is the nearest pharmacy/hospital? How will you communicate? Small details that reduce anxiety.'
+        icon: '💳',
+        title: T('Reality: many travel medical claims are reimbursement', 'الواقع: كثير من المطالبات تكون “تعويض”'),
+        body: T(
+          'Often you pay first, then submit documents for reimbursement. Some plans can arrange payment for expensive procedures via assistance, but don’t assume it for everything.',
+          'غالبًا تدفع أولًا ثم تقدّم مستندات للتعويض. بعض الخطط قد ترتّب الدفع لإجراءات مكلفة عبر المساعدة، لكن لا تفترض ذلك دائمًا.'
+        )
       },
       {
-        icon: '⏱️',
-        title: isArabic ? 'ضع وقتًا احتياطيًا' : 'Build buffer time',
-        body: isArabic
-          ? 'أيام الفعاليات تختلف عن الأيام العادية. الوصول مبكرًا يقلل التوتر.'
-          : 'Event days are different from normal days. Arrive earlier than you think.'
+        icon: '📄',
+        title: T('What actually makes claims succeed', 'ما الذي يجعل التعويض ينجح فعلًا'),
+        body: T(
+          'Keep receipts, medical reports, and proof of travel dates. Without documents, claims become painful or denied.',
+          'احتفظ بالإيصالات والتقارير الطبية وإثبات تواريخ السفر. بدون مستندات تصبح المطالبة صعبة أو قد تُرفض.'
+        )
       }
     ];
-  }, [selectedMatch?.city, isArabic]);
+  }, [isArabic]);
 
   if (step === 'intro') {
     return (
@@ -404,19 +463,55 @@ export default function WorldCupPage() {
           </ul>
         </div>
 
-        {/* City pitfalls */}
+        {/* Where to stay */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
-          <div className="kicker">{c.cityPitfallsTitle}</div>
-          <div className="small" style={{ marginTop: '6px' }}>{c.cityPitfallsSubtitle}</div>
+          <div className="kicker">{c.whereToStayTitle}</div>
+          <div className="small" style={{ marginTop: '6px' }}>{c.whereToStaySubtitle}</div>
           <div className="hr"></div>
           <ul className="list">
-            {cityPitfalls.map((p, idx) => (
+            {cityGuidance.whereToStay.map((p, idx) => (
               <li key={idx}>
                 <span style={{ marginInlineEnd: '8px' }}>{p.icon}</span>
                 <strong>{p.title}:</strong> <span>{p.body}</span>
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Be careful with */}
+        <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
+          <div className="kicker">{c.beCarefulTitle}</div>
+          <div className="small" style={{ marginTop: '6px' }}>{c.beCarefulSubtitle}</div>
+          <div className="hr"></div>
+          <ul className="list">
+            {cityGuidance.beCareful.map((p, idx) => (
+              <li key={idx}>
+                <span style={{ marginInlineEnd: '8px' }}>{p.icon}</span>
+                <strong>{p.title}:</strong> <span>{p.body}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Insurance guidance */}
+        <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
+          <div className="kicker">{c.insuranceTitle}</div>
+          <div className="small" style={{ marginTop: '6px' }}>{c.insuranceSubtitle}</div>
+          <div className="hr"></div>
+          <ul className="list">
+            {insuranceGuidance.map((p, idx) => (
+              <li key={idx}>
+                <span style={{ marginInlineEnd: '8px' }}>{p.icon}</span>
+                <strong>{p.title}:</strong> <span>{p.body}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="small" style={{ marginTop: '10px', opacity: 0.9 }}>
+            {isArabic
+              ? 'ملاحظة واقعية: بعض خطط التأمين الطبي تعتمد على “تعويض” بعد الدفع، وبعضها قد يرتّب الدفع في حالات كبيرة عبر خدمة المساعدة. اقرأ الشروط قبل الشراء.'
+              : 'Real note: many travel medical plans work via reimbursement, and some can arrange payment for expensive cases via assistance. Always read the policy before buying.'}
+          </div>
         </div>
 
         {/* Next steps */}
@@ -428,6 +523,37 @@ export default function WorldCupPage() {
             <li>🛡️ {c.travelInsurance}</li>
             <li>🎫 {c.localTours}</li>
           </ul>
+        </div>
+
+        <div className="hr"></div>
+
+        <div className="kicker">{c.smartLinksTitle}</div>
+        <div className="grid two" style={{ marginTop: '12px' }}>
+          {cityGuidance.smartLinks.map((l) => (
+            <div className="linkcard" key={l.href}>
+              <a href={l.href} target="_blank" rel="noopener noreferrer">
+                {l.label}
+              </a>
+            </div>
+          ))}
+          <div className="linkcard">
+            <a
+              href={selectedMatch?.city ? `https://www.google.com/search?q=${encodeURIComponent(selectedMatch.city + ' best areas to stay tourists')}` : 'https://www.google.com/search?q=best+areas+to+stay+world+cup+city'}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {isArabic ? 'أفضل مناطق السكن (بحث سريع)' : 'Best areas to stay (quick search)'}
+            </a>
+          </div>
+          <div className="linkcard">
+            <a
+              href={selectedMatch?.city ? `https://www.google.com/search?q=${encodeURIComponent(selectedMatch.city + ' transit weekly pass card')}` : 'https://www.google.com/search?q=city+transit+weekly+pass'}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {isArabic ? 'بطاقة المواصلات الأسبوعية (بحث سريع)' : 'Weekly transit pass/card (quick search)'}
+            </a>
+          </div>
         </div>
 
         <div className="hr"></div>
