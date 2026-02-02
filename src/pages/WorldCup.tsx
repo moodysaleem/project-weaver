@@ -552,6 +552,26 @@ export default function WorldCupPage() {
             <div className="big" style={{ fontSize: '16px' }}>{selectedAccommodation?.label[lang]}</div>
           </div>
         </div>
+{/* Toronto deep-dive */}
+{selectedMatch?.city?.toLowerCase().includes("toronto") && (
+  <div className="card" style={{ background: "hsl(var(--soft))", marginTop: "12px" }}>
+    <div className="kicker">
+      {isArabic ? "دليل المدينة التفصيلي" : "City deep-dive guide"}
+    </div>
+
+    <div className="small" style={{ marginTop: "6px" }}>
+      {isArabic
+        ? "أحياء مريحة، مطبات المواصلات، وحقيقة التأمين الصحي في تورونتو."
+        : "Comfortable neighborhoods, transport pitfalls, and healthcare reality in Toronto."}
+    </div>
+
+    <div style={{ marginTop: "12px" }}>
+      <Link to="/worldcup/toronto" className="btn primary">
+        {isArabic ? "اقرأ دليل تورونتو →" : "Read the Toronto guide →"}
+      </Link>
+    </div>
+  </div>
+)}
 
         {/* Top 3 pitfalls + contextual CTAs */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
