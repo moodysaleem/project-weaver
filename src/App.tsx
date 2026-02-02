@@ -1,26 +1,32 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { LanguageProvider } from "@/contexts/LanguageContext";
-import { Shell } from "@/components/Shell";
-import Index from "./pages/Index";
-import WorldCup from "./pages/WorldCup";
-import Immigration from "./pages/Immigration";
-import Verify from "./pages/Verify";
-import NotFound from "./pages/NotFound";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
 
-const App = () => (
-  <LanguageProvider>
-    <BrowserRouter>
-      <Shell>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/worldcup" element={<WorldCup />} />
-          <Route path="/immigration" element={<Immigration />} />
-          <Route path="/verify" element={<Verify />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Shell>
-    </BrowserRouter>
-  </LanguageProvider>
-);
+import Shell from "@/components/Shell";
 
-export default App;
+import Index from "@/pages/Index";
+import Immigration from "@/pages/Immigration";
+import Verify from "@/pages/Verify";
+import WorldCup from "@/pages/WorldCup";
+import Toronto from "@/pages/Toronto";
+import NotFound from "@/pages/NotFound";
+
+export default function App() {
+  return (
+    <Shell>
+      <Routes>
+        <Route path="/" element={<Index />} />
+
+        {/* Main sections */}
+        <Route path="/immigration" element={<Immigration />} />
+        <Route path="/verify" element={<Verify />} />
+
+        {/* World Cup */}
+        <Route path="/worldcup" element={<WorldCup />} />
+        <Route path="/worldcup/toronto" element={<Toronto />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Shell>
+  );
+}
