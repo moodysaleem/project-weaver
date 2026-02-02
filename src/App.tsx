@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 
-import Shell from "@/components/Shell";
+import { Shell } from "@/components/Shell";
 
 import Index from "@/pages/Index";
 import Immigration from "@/pages/Immigration";
