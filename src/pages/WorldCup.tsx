@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { AFFILIATE } from '@/lib/i18n';
 
@@ -80,7 +81,6 @@ function bookingAreaSearch(area: string, cityName: string, lang: 'en' | 'ar') {
 }
 
 function skyscannerCitySearch(cityName: string) {
-  // Works as a generic destination prefill across audiences
   return `${AFFILIATE.skyscanner}?destination=${encodeURIComponent(cityName)}`;
 }
 
@@ -242,7 +242,6 @@ export default function WorldCupPage() {
   };
 
   const cityKey = useMemo(() => {
-    // hostCity is id: ny/dallas/atlanta/tor/mx; normalize handles it
     return normalizeCityKey(selectedMatch?.city, answers.hostCity);
   }, [selectedMatch?.city, answers.hostCity]);
 
@@ -519,7 +518,7 @@ export default function WorldCupPage() {
         <div className="big">{c.title}</div>
         <div className="small">{c.subtitle}</div>
         <div className="hr"></div>
-        <button className="btn primary" onClick={goNext}>
+        <button className="btn primary" onClick={() => setStep('match')}>
           {c.start}
         </button>
       </div>
@@ -552,26 +551,25 @@ export default function WorldCupPage() {
             <div className="big" style={{ fontSize: '16px' }}>{selectedAccommodation?.label[lang]}</div>
           </div>
         </div>
-{/* Toronto deep-dive */}
-{selectedMatch?.city?.toLowerCase().includes("toronto") && (
-  <div className="card" style={{ background: "hsl(var(--soft))", marginTop: "12px" }}>
-    <div className="kicker">
-      {isArabic ? "دليل المدينة التفصيلي" : "City deep-dive guide"}
-    </div>
 
-    <div className="small" style={{ marginTop: "6px" }}>
-      {isArabic
-        ? "أحياء مريحة، مطبات المواصلات، وحقيقة التأمين الصحي في تورونتو."
-        : "Comfortable neighborhoods, transport pitfalls, and healthcare reality in Toronto."}
-    </div>
-
-    <div style={{ marginTop: "12px" }}>
-      <Link to="/worldcup/toronto" className="btn primary">
-        {isArabic ? "اقرأ دليل تورونتو →" : "Read the Toronto guide →"}
-      </Link>
-    </div>
-  </div>
-)}
+        {/* Toronto deep-dive (safe trigger) */}
+        {cityKey === 'tor' && (
+          <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
+            <div className="kicker">
+              {isArabic ? 'دليل المدينة التفصيلي' : 'City deep-dive guide'}
+            </div>
+            <div className="small" style={{ marginTop: '6px' }}>
+              {isArabic
+                ? 'أحياء مريحة، مطبات المواصلات، وحقيقة التأمين الصحي في تورونتو.'
+                : 'Comfortable neighborhoods, transport pitfalls, and healthcare reality in Toronto.'}
+            </div>
+            <div style={{ marginTop: '12px' }}>
+              <Link to="/worldcup/toronto" className="btn primary">
+                {isArabic ? 'اقرأ دليل تورونتو →' : 'Read the Toronto guide →'}
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Top 3 pitfalls + contextual CTAs */}
         <div className="card" style={{ background: 'hsl(var(--soft))', marginBottom: '12px' }}>
@@ -674,7 +672,7 @@ export default function WorldCupPage() {
           ))}
 
           <div className="linkcard">
-            <a href={skyscannerCitySearch(isArabic ? 'New York' : cityName)} target="_blank" rel="noopener noreferrer">
+            <a href={skyscannerCitySearch(cityName)} target="_blank" rel="noopener noreferrer">
               {isArabic ? 'Skyscanner - حجز الطيران' : 'Skyscanner - Book Flights'}
             </a>
           </div>
