@@ -15,6 +15,7 @@ export default function App() {
     <Shell>
       <Routes>
         <Route path="/" element={<Index />} />
+<Route path="/worldcup/toronto" element={<Toronto />} />
 
         {/* Main sections */}
         <Route path="/immigration" element={<Immigration />} />
